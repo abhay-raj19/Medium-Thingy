@@ -20,6 +20,18 @@ app.post('/api/v1/signup',async (c) =>{
 
   try {
     const body = await c.req.json();
+    //check if user exist prior to signup.
+    const prioUser = await prisma.user.findUnique({
+      where:{
+        email:body.email,
+      },
+    });
+    if(prioUser){
+      c.status(400);
+      return c.json({
+        message:"User exist! Do login"
+      })
+    }
     //created up the user by payloads
     const user = await prisma.user.create({
       data:{
@@ -30,12 +42,10 @@ app.post('/api/v1/signup',async (c) =>{
     })
     //Generating up the Tokens 
      const token =await sign({id:user.id},c.env.JWT_SECRET)
-
      return c.json({
         message:"User Created Succesfully!",
         jwt : token,
      });
-
 
   } catch (error) {
     console.log(error);
@@ -44,10 +54,7 @@ app.post('/api/v1/signup',async (c) =>{
     })
     
   }
-
-
-
-  return c.text('hello signup')
+  
 });
 
 // POST /api/v1/signin
@@ -72,3 +79,7 @@ app.get('/api/v1/blog/:id', (c) => {
 
 
 export default app
+
+
+
+
