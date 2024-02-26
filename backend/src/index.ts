@@ -12,7 +12,7 @@ const app = new Hono<{
 }>();
 
 
-// POST /api/v1/signup
+// ✅POST /api/v1/signup
 app.post('/api/v1/signup',async (c) =>{
   const prisma = new PrismaClient({
     datasourceUrl: c.env.DATABASE_URL,
@@ -20,6 +20,7 @@ app.post('/api/v1/signup',async (c) =>{
 
   try {
     const body = await c.req.json();
+
     //check if user exist prior to signup.
     const prioUser = await prisma.user.findUnique({
       where:{
@@ -49,17 +50,58 @@ app.post('/api/v1/signup',async (c) =>{
 
   } catch (error) {
     console.log(error);
+    c.status(403);
     c.json({ 
       message: 'User not created!'
     })
     
-  }
-  
+  }  
 });
 
 // POST /api/v1/signin
-app.post('/api/v1/signin',(c) =>{
-  return c.text('hello signin')
+app.post('/api/v1/signin',async (c) => {
+
+  const prisma = new PrismaClient({
+    datasourceUrl: c.env.DATABASE_URL,
+  }).$extends(withAccelerate())
+  
+  try {
+    const jwttoken   = c.req.header("Authorization")?.split(" ")[1]
+
+    if (!jwttoken) {
+      c.status(400); // or any other appropriate status code
+      return c.json({
+        msg: "Invalid Authorization header",
+      });
+    }
+
+    const {id} = await verify(jwttoken , c.env.JWT_SECRET)
+    // console.log(id);
+    const user = await prisma.user.findUnique({
+      where:{
+        id:id,
+      },
+    })
+    if(!user){
+      c.status(403);
+      return c.json({
+        msg:"User not Found! try Signup"
+      })
+    }
+    return c.json({
+      msg:"User Succesfully SignIn"
+    })   
+    
+  } catch (error) {
+    console.log(error);
+    // Handle other errors or return an appropriate response
+    c.status(500);
+    return c.json({
+      msg: "Internal Server Error",
+    });
+    
+  }
+ 
 });
 
 // POST /api/v1/blog
